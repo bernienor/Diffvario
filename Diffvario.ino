@@ -19,8 +19,12 @@
 #include <SPI.h>
 #include <SD.h>
 #include "parser.h"
+#include "V7-processing.h"
+#include "Nano-processing.h"
 
+// Various defines for measurement setup:
 #define GPS_STR_LENGTH 100
+const int ANALOG_MEAS_FREQ = 10;
 
 const int chipSelect = 10;
 static char gpsstr[GPS_STR_LENGTH];
@@ -74,16 +78,36 @@ void process_serial(void)
   }
 }
 
+/**
+\brief reads and logs analog io-pins to the SD-card
+\todo Update with valid and usable pins. 4 pins used as an example.
+**/
 void  process_analog()
 {
+  static long nextmeas = 0; // To keep track of our measurements
+  const int interval = 1000/ANALOG_MEAS_FREQ;
 
-
-  
+  if(millis()>nextmeas){
+    nextmeas += interval;
+    dataFile.print("Analog;");
+    dataFile.print(analogRead(0)); 
+    dataFile.print(";");
+    dataFile.print(analogRead(1)); 
+    dataFile.print(";");
+    dataFile.print(analogRead(2)); 
+    dataFile.print(";");
+    dataFile.println(analogRead(3)); 
+  }
 }
 
 void process_I2C(){
+  static long nextmeas = 0; // To keep track of our measurements
+  const int interval = 1000; // [ms]
 
-  
+  if(millis()>nextmeas){
+    nextmeas += interval;
+
+  }  
 }
 
 void process_gpsstr(char *str){
@@ -97,17 +121,25 @@ void process_gpsstr(char *str){
     dataFile.print(str);
   }
 
-  // Example struture;
-  if(strcmp(Substr[0],"$GPSXXX"))
-    process_gpsxxx(Substr);
-  //dataFile.println(str);
-  
+  // High freq, should be among the first tests.
+  if(strcmp(Substr[0],"$PLXVF")){
+    process_PLXVF(Substr, dataFile);
+    return;
+  }
+
+
+  if(strcmp(&Substr[0][3],"GGA")){  // Hack to include all GPS-sources. Not sure it's needed.
+    process_GPGGA(Substr, dataFile);
+  return;
+  }  
+  // Low freq, can be left at the end.
+  if(strcmp(Substr[0],"$PLXVS")){
+    process_PLXVS(Substr, dataFile);
+  return;
+  }  
 }
 
 void process_gpsxxx(char **sstr){
   dataFile.println("GPS Dummy example");
-
-
-  
 }
 
