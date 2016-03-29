@@ -18,12 +18,9 @@
 
 #include <SPI.h>
 #include <SD.h>
-#include "parser.h"
-#include "V7-processing.h"
-#include "Nano-processing.h"
+#include "process_gpsstr.h"
 
 // Various defines for measurement setup:
-#define GPS_STR_LENGTH 100
 const int ANALOG_MEAS_FREQ = 10;
 
 const int chipSelect = 10;
@@ -58,10 +55,12 @@ void loop() {
     dataFile.println("END");
     dataFile.close();
   }
-
 }
 
-
+/**
+\brief Simple processing of serial (GPS) data.
+Parses one line at the time.
+**/
 void process_serial(void)
 {
   gpsstr[i++] = Serial.read();
@@ -73,7 +72,7 @@ void process_serial(void)
     }
   }
   if(gpsstr[i-1] == 0){
-    process_gpsstr(gpsstr);
+    process_gpsstr(gpsstr, dataFile);
     i=0;
   }
 }
@@ -110,36 +109,4 @@ void process_I2C(){
   }  
 }
 
-void process_gpsstr(char *str){
-  char *Substr[15];
-  
-  int errorcode = parsecsv( str, ',', Substr, 15, GPS_STR_LENGTH);
-  if(errorcode){
-    dataFile.print("Parsing Error code: ");
-    dataFile.print(String(errorcode));
-    dataFile.print(" String: \"");
-    dataFile.print(str);
-  }
-
-  // High freq, should be among the first tests.
-  if(strcmp(Substr[0],"$PLXVF")){
-    process_PLXVF(Substr, dataFile);
-    return;
-  }
-
-
-  if(strcmp(&Substr[0][3],"GGA")){  // Hack to include all GPS-sources. Not sure it's needed.
-    process_GPGGA(Substr, dataFile);
-  return;
-  }  
-  // Low freq, can be left at the end.
-  if(strcmp(Substr[0],"$PLXVS")){
-    process_PLXVS(Substr, dataFile);
-  return;
-  }  
-}
-
-void process_gpsxxx(char **sstr){
-  dataFile.println("GPS Dummy example");
-}
 
